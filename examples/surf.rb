@@ -45,6 +45,12 @@ end
 
 result = HyperNavigator.surf(options.url, options.pattern, options.headers, { :verbose => options.verbose })
 
-result.map do |n|
-  pp JSON.parse(n.response.body) rescue nil
+print_tree = lambda do |node|
+  padding = '  ' * node.depth
+  puts "#{padding}#{node.rel} : #{node.href}"
+  node.descendants.each do |d|
+    print_tree.call(d)
+  end
 end
+
+print_tree.call(result)

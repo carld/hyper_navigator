@@ -74,37 +74,37 @@ RSpec.describe HyperNavigator do
 
   describe "#surf" do
 
-    it "returns all of the documents given a path with any match:  ['a', :any]" do
-      result = HyperNavigator.surf('/', ['root', 'a', :any]).map {|x| x.href }
+    it "returns all of the documents given a path with any match:  [:root, 'a', :any]" do
+      result = HyperNavigator.surf('/', [:root, 'a', :any]).flatten_branch.map {|x| x.href }
       expect(result).to include('/a', '/a/b')
       expect(result).not_to include('/a/b1', '/a/b/c', '/a/b/c/d')
     end
 
     it "returns all of the documents given a Kleene star path:  [:any, :star] " do
-      result = HyperNavigator.surf('/', [:any, :star]).map {|x| x.href }
+      result = HyperNavigator.surf('/', [:any, :star]).flatten_branch.map {|x| x.href }
       expect(result).to include('/a', '/a/b', '/a/b1', '/a/b/c', '/a/b/c/d')
     end
 
     it "returns all of the documents given a Kleene star path:  [:any, :any] " do
-      result = HyperNavigator.surf('/', [:any, :any, :any]).map {|x| x.href }
+      result = HyperNavigator.surf('/', [:any, :any, :any]).flatten_branch.map {|x| x.href }
       expect(result).to include('/a', '/a/b')
       expect(result).not_to include('/a/b1', '/a/b/c', '/a/b/c/d')
     end
 
-    it "returns only the documents in the given path:  ['a', 'b', 'c' ,'d'] " do
-      result = HyperNavigator.surf('/', ['root', 'a', 'b', 'c' , 'd']).map {|x| x.href }
+    it "returns only the documents in the given path:  [:root, 'a', 'b', 'c' ,'d'] " do
+      result = HyperNavigator.surf('/', [:root, 'a', 'b', 'c' , 'd']).flatten_branch.map {|x| x.href }
       expect(result).to include('/a', '/a/b', '/a/b/c', '/a/b/c/d')
       expect(result).not_to include('/a/b1')
     end
 
-    it "returns only the documents in the given path:  ['root', a', 'b', 'c'] " do
-      result = HyperNavigator.surf('/', ['root', 'a', 'b', 'c']).map {|x| x.href }
+    it "returns only the documents in the given path:  [:root, a', 'b', 'c'] " do
+      result = HyperNavigator.surf('/', [:root, 'a', 'b', 'c']).flatten_branch.map {|x| x.href }
       expect(result).to include('/a', '/a/b', '/a/b/c')
       expect(result).not_to include('/a/b1', '/a/b/c/d')
     end
 
     it "returns only the documents in the given Kleene star path:  [:any, :star, 'b']" do
-      result = HyperNavigator.surf('/', [:any, :star, 'b']).map {|x| x.href }
+      result = HyperNavigator.surf('/', [:any, :star, 'b']).flatten_branch.map {|x| x.href }
       expect(result).to include('/a', '/a/b')
       expect(result).not_to include('/a/b1', '/a/b/c', '/a/b/c/d')
     end
