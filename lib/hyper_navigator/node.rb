@@ -38,44 +38,44 @@ module HyperNavigator
 
     def match_here(exp, node)
       if exp == nil
-        return node
+        return nil
       elsif exp[1] == :star
         match_star(exp[0], exp.drop(2), node)
         return node
       elsif exp[0] == :any
-        match_here_descendants(exp, node)
+        node.descendants = match_here_descendants(exp.drop(1), node)
         return node
       elsif exp[0] == node.rel
-        match_here_descendants(exp, node)
+        node.descendants = match_here_descendants(exp.drop(1), node)
         return node
       end
-      return NullNode.new
+      return nil
     end
 
     def match_here_descendants(exp, node)
-      links = node.links.map {|link| make_node(link, node.depth + 1)}
-      descendants = links.map {|n| match_here(exp.drop(1), n) }
-      node.descendants = descendants.select {|d| d.class == Node }
+      return [] if exp == nil
+      nodes = node.links.map {|link| make_node(link, node.depth + 1)}
+      matched_nodes = nodes.map {|n| match_here(exp, n) }
+      return matched_nodes.compact
     end
 
     def match_star(exp_star, exp, node)
-      # in case of zero matches, exp can match here
-      node_here = match_here(exp, node)
-
-      if node_here.is_a? NullNode
-        match_star_descendants(exp_star, exp, node)
-      end
-    end
-
-    def match_star_descendants(exp_star, exp, node)
-      if exp_star == :any
-        links = node.links
+      # exp can match here, ending the descent
+      exp_node_here = match_here(exp, node)
+      if exp_node_here
+        # finish the star match
       else
-        links = node.links.select { |link| link["rel"] == exp_star }
-      end
+        nodes = match_here_descendants([exp_star], node)
 
-      node.descendants = links.map { |link| make_node(link, node.depth + 1) }
-      node.descendants.map {|desc| match_star(exp_star, exp, desc) }
+        # continue the star matching for each descendant
+        nodes.each {|n| match_star(exp_star, exp, n) }
+        if exp.empty?
+          node.descendants = nodes
+        else
+          # removing nodes that are not in the path to the next exp
+          node.descendants = nodes.reject {|n| n.descendants.empty? && n.rel != exp[0] }
+        end
+      end
     end
 
     def make_node(link, depth=nil)
@@ -90,7 +90,7 @@ module HyperNavigator
 
     IGNORE_REFS = ["self", "up", "next", "prev"]
 
-    attr_reader :rel, :href, :headers, :response
+    attr_reader :rel, :href, :response
     attr_accessor :descendants, :depth
 
     def initialize(rel, href, headers={}, depth=nil)
@@ -121,9 +121,4 @@ module HyperNavigator
 
   end
 
-  class NullNode < Node
-    def initialize()
-      super(nil, nil)
-    end
-  end
 end
