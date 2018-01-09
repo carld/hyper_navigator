@@ -21,17 +21,17 @@ It expects each resource to return a structure in the given format:
 The main entry point for this gem is
 
 ```ruby
-  HyperNavigator.surf(url, traversal-path)
+  HyperNavigator.surf(href, traversal_pattern)
 ```
 
-The `traversal-path` argument provided is an array of `rel` names.  This array should contain the rel names in order of traversal.
+The `traversal_pattern` argument provided is an array of `rel` names.  This array should contain the rel names in order of traversal.
 
 An example path, that will look for an `apple` rel in the resource, fetch from it's corresponding href, then look for a `pudding` rel in that resource and fetch its corresponding href:
 
 ```ruby
-  traversal-path = ["apple", "pudding"]
+  traversal_pattern = ["apple", "pudding"]
 
-  HyperNavigator.surf("https://fruitful-resources.io", traversal-path)
+  HyperNavigator.surf("https://fruitful-resources.io", traversal_pattern)
 ```
 
 The return value of `#surf` will be a `HyperNavigator::Node`.
@@ -61,7 +61,6 @@ Or install it yourself as:
 ## Usage
 
 `#surf` will return all nodes encountered during a browse.
-`#surf_to_leaves` will return just the leaf nodes during a browse.
 
 Example usage:
 
@@ -71,8 +70,16 @@ Example usage:
   path = ["apple", "pudding"]
   headers = { "Authorization": "Bearer #{$token}" }
 
-  result = HyperNavigator.surf_to_leaves('https://fruitful-resources.io', path, headers)
+  result = HyperNavigator.surf("https://fruitful-resources.io", traversal_pattern, headers)
 ```
+
+### Pattern Matching
+
+The traversal pattern can contain the special matching symbols `:any` and `:star`.
+They are analogous to the regular expression metacharacters `.` and `*`.
+
+`:any` will match any rel.
+`:star` matches the preceding element zero or more times.
 
 ## Development
 

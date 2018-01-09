@@ -25,46 +25,105 @@ module HyperNavigator
     http.request(request)
   end
 
+  class PatternMatcher
+
+    def initialize(headers,opts={})
+      @opts = opts
+      @headers = headers
+    end
+
+    def match(href, exp)
+      match_here(exp, Node.new(:root, href, @headers, 0))
+    end
+
+    def match_here(exp, node)
+      if exp == nil
+        return node
+      elsif exp[1] == :star
+        match_star(exp[0], exp.drop(2), node)
+        return node
+      elsif exp[0] == :any
+        match_here_descendants(exp, node)
+        return node
+      elsif exp[0] == node.rel
+        match_here_descendants(exp, node)
+        return node
+      end
+      return NullNode.new
+    end
+
+    def match_here_descendants(exp, node)
+      links = node.links.map {|link| make_node(link, node.depth + 1)}
+      descendants = links.map {|n| match_here(exp.drop(1), n) }
+      node.descendants = descendants.select {|d| d.class == Node }
+    end
+
+    def match_star(exp_star, exp, node)
+      # in case of zero matches, exp can match here
+      node_here = match_here(exp, node)
+
+      if node_here.is_a? NullNode
+        match_star_descendants(exp_star, exp, node)
+      end
+    end
+
+    def match_star_descendants(exp_star, exp, node)
+      if exp_star == :any
+        links = node.links
+      else
+        links = node.links.select { |link| link["rel"] == exp_star }
+      end
+
+      node.descendants = links.map { |link| make_node(link, node.depth + 1) }
+      node.descendants.map {|desc| match_star(exp_star, exp, desc) }
+    end
+
+    def make_node(link, depth=nil)
+      padding = '  ' * depth
+      puts "#{padding}#{link}" if @opts[:verbose]
+      Node.new(link["rel"], link["href"], @headers, depth)
+    end
+
+  end
+
   class Node
 
-    attr_reader :ancestor, :descendants, :rel, :href, :depth, :response, :path
+    IGNORE_REFS = ["self", "up", "next", "prev"]
 
-    def initialize(rel, href, ancestor=nil, depth=nil, path=nil, headers={})
-      @ancestor = ancestor
-      @descendants = []
+    attr_reader :rel, :href, :headers, :response
+    attr_accessor :descendants, :depth
+
+    def initialize(rel, href, headers={}, depth=nil)
       @rel = rel
       @href = href
-      @depth = depth
-      @path = path
       @headers = headers
-
-      @response = HyperNavigator.get(href, headers)
-      @descendants = follow_links
+      @descendants = []
+      @depth = depth
+      if href
+        @response = HyperNavigator.get(href, headers)
+        raise RuntimeError, @response unless @response.code =~ /^2..$/
+      end
     end
-
-    private
 
     def links
-      json = JSON.parse(@response.body) rescue nil
-      return [] unless json
-      # If we've been given a path then only follow the links in the path
-      if @path
-        json["links"].select { |link| link["rel"] == @path.first }
-      else
-        json["links"].reject {|i| ["self","up","next","prev"].any?{|r| r == i["rel"]} }
+      @cached_links ||= begin
+        json = JSON.parse(@response.body) rescue nil
+        return [] unless json
+        json["links"].reject do |i|
+          IGNORE_REFS.any? { |r| r == i["rel"] }
+        end
       end
     end
 
-    def next_step
-      return @path.drop(1) if @path
-      nil
+    def flatten_branch
+      descendants + descendants.flat_map { | d| d.flatten_branch }
     end
 
-    def follow_links
-      links.map do |link|
-        Node.new(link["rel"], link["href"], self, @depth + 1, next_step, @headers)
-      end
-    end
+  end
 
+  class NullNode < Node
+    def initialize()
+      super(nil, nil)
+    end
   end
 end
