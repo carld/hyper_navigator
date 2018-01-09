@@ -109,6 +109,18 @@ RSpec.describe HyperNavigator do
       expect(result).not_to include('/a/b1', '/a/b/c', '/a/b/c/d')
     end
 
+    it "returns only the documents in the given Kleene star path:  [:any, :star, 'b', 'c']" do
+      result = HyperNavigator.surf('/', [:any, :star, 'b', 'c']).flatten_branch.map {|x| x.href }
+      expect(result).to include('/a', '/a/b', '/a/b/c')
+      expect(result).not_to include('/a/b1', '/a/b/c/d')
+    end
+
+    it "returns only the documents in the given Kleene star path:  [:any, :star, 'b', 'c', 'd']" do
+      result = HyperNavigator.surf('/', [:any, :star, 'b', 'c', 'd']).flatten_branch.map {|x| x.href }
+      expect(result).to include('/a', '/a/b', '/a/b/c', '/a/b/c/d')
+      expect(result).not_to include('/a/b1')
+    end
+
   end
 
 end
